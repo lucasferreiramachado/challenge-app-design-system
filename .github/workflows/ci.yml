@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_VERSION: "10.0.x"
+
+jobs:
+  tests:
+    name: Build, test and coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      - name: Restore
+        run: |
+          dotnet restore DesignSystem/DesignSystem.csproj -p:TargetFramework=net10.0
+          dotnet restore DesignSystem.Tests/DesignSystem.Tests.csproj -p:TargetFramework=net10.0
+      - name: Build DesignSystem
+        run: dotnet build DesignSystem/DesignSystem.csproj --configuration Release --framework net10.0 --no-restore
+      - name: Test DesignSystem
+        run: dotnet test DesignSystem.Tests/DesignSystem.Tests.csproj --configuration Release --framework net10.0 --no-restore --collect:"XPlat Code Coverage" --results-directory TestResults --logger "trx;LogFileName=design-system-tests.trx"
+      - name: Pack validation
+        run: dotnet pack DesignSystem/DesignSystem.csproj --configuration Release --no-build --output artifacts
+      - name: Publish test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: design-system-test-results-${{ github.sha }}
+          path: |
+            TestResults/
+            artifacts/
+          if-no-files-found: warn
+
+  example-android:
+    name: Build Android Example
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      - name: Install Android workload
+        run: dotnet workload install maui-android
+      - name: Build unsigned Android Example
+        run: dotnet build Example/Example.csproj --configuration Release --framework net10.0-android
+
+  example-ios:
+    name: Build iOS Example
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      - name: Install iOS workload
+        run: dotnet workload install maui-ios
+      - name: Build unsigned simulator iOS Example
+        run: dotnet build Example/Example.csproj --configuration Release --framework net10.0-ios --runtime iossimulator-arm64 -p:EnableCodeSigning=false
