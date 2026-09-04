@@ -26,7 +26,7 @@ jobs:
       - name: Restore
         run: dotnet restore DesignSystem/DesignSystem.csproj
       - name: Pack
-        run: dotnet pack DesignSystem/DesignSystem.csproj --configuration Release --no-restore --output artifacts /p:PackageVersion="1.0.${{ github.run_number }}"
+        run: dotnet pack DesignSystem/DesignSystem.csproj --configuration Release --no-restore --output artifacts /p:PackageVersion="1.0.0"
       - name: Validate package
         run: test -n "$(find artifacts -maxdepth 1 -name '*.nupkg' -print -quit)"
       - name: Publish package
